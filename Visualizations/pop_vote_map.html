@@ -1,39 +1,88 @@
 <!DOCTYPE html>
-<style>
+<html lang="en">
+  <head>
+		<meta charset="utf-8">
+		<title>2020 Election Tweets Map</title>
+    <style>
 
-.states :hover {
-  fill: gray;
-}
+      .states :hover {
+        fill: gray;
+      }
+      
+      .state-borders {
+        fill: none;
+        stroke: #fff;
+        stroke-width: 0.5px;
+        stroke-linejoin: round;
+        stroke-linecap: round;
+        pointer-events: none;
+      }
+      
+      </style>
+      <svg width="960" height="650" id = "svg"></svg>
+      <div class = "row">
+      <svg width="240" height="400" id = "svg1"></svg>
+      <svg width="240" height="400" id = "svg2"></svg>
+      <svg width="240" height="400" id = "svg3"></svg>
+      <svg width="240" height="400" id = "svg4"></svg>
+      </div>
+      
+      <script src="https://d3js.org/d3.v4.min.js"></script>
+      <script src="https://d3js.org/topojson.v2.min.js"></script>
+      <script src="https://d3js.org/d3-color.v2.min.js"></script>
+      <script src="https://d3js.org/d3-interpolate.v2.min.js"></script>
+      <script src="https://d3js.org/d3-scale-chromatic.v2.min.js"></script>
+    </head>
 
-.state-borders {
-  fill: none;
-  stroke: #fff;
-  stroke-width: 0.5px;
-  stroke-linejoin: round;
-  stroke-linecap: round;
-  pointer-events: none;
-}
-
-</style>
-<svg width="960" height="600"></svg>
-<script src="https://d3js.org/d3.v4.min.js"></script>
-<script src="https://d3js.org/topojson.v2.min.js"></script>
-<script src="https://d3js.org/d3-color.v2.min.js"></script>
-<script src="https://d3js.org/d3-interpolate.v2.min.js"></script>
-<script src="https://d3js.org/d3-scale-chromatic.v2.min.js"></script>
+<body>
 <script>
 
-var svg = d3.select("svg");
-
+var svg = d3.select("#svg");
+var svg1 = d3.select("#svg1");
+var svg2 = d3.select("#svg2");
+var svg3 = d3.select("#svg3");
+var svg4 = d3.select("#svg4");
 var path = d3.geoPath();
 
-let pop_vote = {}; 
-d3.csv('../Datasets/pop_vote.csv', function(d){
+let tweets = {}; 
+d3.csv('../Datasets/count.csv', function(d){
   for (let i = 0; i < d.length; i++){
-    pop_vote[d[i].st] = d[i].dem_percent;
+    tweets[d[i].st] = {"D" : d[i].count_x,  "R" : d[i].count_y, "percent" : d[i].percent};
   }
 });
-console.log(pop_vote);
+console.log(tweets);
+
+let pop_vote = {}; 
+d3.csv('../Datasets/pop_vote_color.csv', function(d){
+  for (let i = 0; i < d.length; i++){
+    pop_vote[d[i].st] = d[i].prop;
+  }
+});
+
+let vote_counts = {};
+
+d3.csv('../Datasets/pop_vote_data.csv', function(d){
+  for (let i = 0; i < d.length; i++){
+    vote_counts[d[i].st] = {"D" : d[i].dem_votes, "R" : d[i].rep_votes};
+  }
+});
+
+let likes = {};
+d3.csv('../Datasets/likes.csv', function(d){
+  for (let i = 0; i < d.length; i++){
+    console.log(d);
+    likes[d[i].st] = {"D" : d[i].likes_x, "R" : d[i].likes_y, "percent" : d[i].percent};
+  }
+});
+
+let retweets = {};
+d3.csv('../Datasets/retweet_count.csv', function(d){
+  for (let i = 0; i < d.length; i++){
+    console.log(d);
+    retweets[d[i].st] = {"D" : d[i].retweet_count_x, "R" : d[i].retweet_count_y, "percent" : d[i].percent};
+  }
+});
+console.log(retweets);
 d3.json("https://d3js.org/us-10m.v1.json", function(error, us) {
   if (error) throw error;
 
@@ -48,7 +97,82 @@ d3.json("https://d3js.org/us-10m.v1.json", function(error, us) {
         console.log(pop_vote[d.id]);
         return d3.interpolateRdBu(pop_vote[d.id]);
       })
-      .attr("d", path);
+    .attr("id", function(d){
+      return d.id;
+    })
+    .attr("d", path)
+    .append("title")
+			  	.text(function(d) {
+			   			return "D: " + vote_counts[d.id]["D"].toString() + " R: " + vote_counts[d.id]["R"].toString();
+			   		});
+
+      
+      function makePie(svg, dataset, title){
+        //Width and height
+			var w = 200;
+			var h = 200;
+
+			var outerRadius = w / 2;
+			var innerRadius = 0;
+			var arc = d3.arc()
+						.innerRadius(innerRadius)
+						.outerRadius(outerRadius);
+			var pie = d3.pie();
+			
+			//Easy colors accessible via a 10-step ordinal scale
+			var color = d3.scaleOrdinal()
+      .range(["blue", "red"]);
+        //Set up groups
+			var arcs = svg.selectAll("g.arc")
+						  .data(pie(dataset))
+						  .enter()
+						  .append("g")
+						  .attr("class", "arc")
+						  .attr("transform", "translate(" + (w/2) + ", 130)");
+		
+			//Draw arc paths
+			arcs.append("path")
+			    .attr("fill", function(d, i) {
+			    	return color(i);
+			    })
+          
+			    .attr("d", arc)
+          ;
+			
+			//Labels
+			arcs.append("text")
+			    .attr("transform", function(d) {
+			    	return "translate(" + arc.centroid(d) + ")";
+			    })
+          
+			    .attr("text-anchor", "middle")
+			    .text(function(d) {
+			    	return d.value;
+			    });
+        
+        svg.append("text")
+        .attr("class", "text")
+        .attr("x", (w / 2))             
+        .attr("y", (20))
+        .attr("text-anchor", "middle")  
+        .style("font-size", "16px") 
+        .style("text-decoration", "underline")  
+        .text(title);
+      }
+      
+    d3.selectAll("path")
+			.on("mouseover", function () {
+      let id = this.id;
+      makePie(svg1, [vote_counts[id]["D"], vote_counts[id]["R"]], "Popular vote");
+      makePie(svg2, [tweets[id]["D"], tweets[id]["R"]], "Tweets per party");
+      makePie(svg3, [likes[id]["D"], likes[id]["R"]], "Likes per party");
+      makePie(svg4, [retweets[id]["D"], retweets[id]["R"]], "Retweets per party");
+      })
+      .on("mouseout", function(){
+        d3.selectAll("g.arc").remove();
+        d3.selectAll(".text").remove();
+      });
+ 
 
   svg.append("path")
       .attr("class", "state-borders")
@@ -56,3 +180,5 @@ d3.json("https://d3js.org/us-10m.v1.json", function(error, us) {
 });
 
 </script>
+</body>
+</html>
