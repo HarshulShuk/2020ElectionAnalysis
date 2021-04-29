@@ -2,6 +2,8 @@
 
 -> Note: The 800mb of tweets are not uploaded here (git file size limit). Unzip them into the raw_data folder
 
+[Visualization link](https://rmlovell.github.io/2020ElectionAnalysis/sentiment_map.html)
+
 [Kaggle Dataset of Tweet](https://www.kaggle.com/manchunhui/us-election-2020-tweets)
 
 [Electoral College Results](https://www.archives.gov/electoral-college/2020)
